@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Radius Map — Bear & Middletown, DE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0e1117;
+      color: #e8e4d9;
+      font-family: 'DM Mono', monospace;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 14px 24px;
+      background: #0e1117;
+      border-bottom: 1px solid #2a2f3a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1000;
+    }
+
+    .header-left h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      color: #e8e4d9;
+      letter-spacing: 0.01em;
+    }
+
+    .header-left p {
+      font-size: 0.68rem;
+      color: #6b7280;
+      margin-top: 2px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .badge {
+      background: #1e3a5f;
+      border: 1px solid #2e5a8f;
+      color: #7eb8f7;
+      font-size: 0.7rem;
+      padding: 5px 12px;
+      border-radius: 2px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    #map {
+      flex: 1;
+    }
+
+    .info-panel {
+      position: absolute;
+      bottom: 28px;
+      left: 16px;
+      z-index: 1000;
+      background: rgba(14, 17, 23, 0.88);
+      border: 1px solid #2a2f3a;
+      backdrop-filter: blur(8px);
+      padding: 14px 18px;
+      border-radius: 3px;
+      min-width: 200px;
+    }
+
+    .info-panel .label {
+      font-size: 0.6rem;
+      color: #6b7280;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .info-panel .coord {
+      font-size: 0.72rem;
+      color: #7eb8f7;
+      line-height: 1.7;
+    }
+
+    .info-panel .divider {
+      border: none;
+      border-top: 1px solid #2a2f3a;
+      margin: 10px 0;
+    }
+
+    .info-panel .stat {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      color: #9ca3af;
+      line-height: 1.8;
+    }
+
+    .info-panel .stat span:last-child {
+      color: #e8e4d9;
+    }
+
+    /* Override Leaflet default tiles for dark look */
+    .leaflet-container {
+      background: #1a1f2b;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Triple Radius Map &mdash; New Castle County, DE</h1>
+    <p>2647 Pulaski Hwy, Newark &nbsp;·&nbsp; 301 S Ridge Ave, Middletown</p>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <div class="badge" style="background:#1e3a5f;border-color:#2e5a8f;color:#7eb8f7;">&#9679; Newark 10 mi</div>
+    <div class="badge" style="background:#1f3d2a;border-color:#2e6b40;color:#6ee7a0;">&#9679; Middletown 5 mi</div>
+    <div class="badge" style="background:#3d2a1e;border-color:#8f5a2e;color:#f7b87e;">&#9679; Middletown 10 mi</div>
+  </div>
+</header>
+
+<div id="map"></div>
+
+<div class="info-panel">
+  <div class="label">Location 1 — Newark, DE</div>
+  <div class="coord" style="color:#7eb8f7;">39.6044° N &nbsp; 75.7553° W</div>
+  <hr class="divider"/>
+  <div class="stat"><span>Radius</span><span>10 miles</span></div>
+  <div class="stat"><span>Area</span><span>~314 mi²</span></div>
+  <hr class="divider"/>
+  <div class="label">Location 2 — Middletown, DE</div>
+  <div class="coord" style="color:#6ee7a0;">39.4489° N &nbsp; 75.7336° W</div>
+  <hr class="divider"/>
+  <div class="stat"><span>Radius</span><span>5 miles</span></div>
+  <div class="stat"><span>Area</span><span>~79 mi²</span></div>
+</div>
+
+<script>
+  const CENTER1 = [39.604384, -75.755322];  // 2647 Pulaski Hwy, Newark, DE
+  const CENTER2 = [39.448854, -75.733628];  // 301 S Ridge Ave, Middletown, DE
+  const MILES_TO_METERS = 1609.344;
+
+  const map = L.map('map', {
+    center: [39.53, -75.74],
+    zoom: 10,
+    zoomControl: true,
+  });
+
+  // Dark tile layer
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Circle 1 — Newark, 10 miles (blue)
+  L.circle(CENTER1, {
+    radius: 10 * MILES_TO_METERS,
+    color: '#7eb8f7',
+    weight: 2,
+    opacity: 0.9,
+    fillColor: '#2e5a8f',
+    fillOpacity: 0.12,
+  }).addTo(map);
+
+  // Circle 2 — Middletown, 5 miles (green)
+  L.circle(CENTER2, {
+    radius: 5 * MILES_TO_METERS,
+    color: '#6ee7a0',
+    weight: 2,
+    opacity: 0.9,
+    fillColor: '#2e6b40',
+    fillOpacity: 0.15,
+  }).addTo(map);
+
+  // Marker factory
+  function makeMarker(color, glowColor) {
+    return L.divIcon({
+      html: `<div style="
+        width: 14px; height: 14px;
+        background: ${color};
+        border: 2px solid #fff;
+        border-radius: 50%;
+        box-shadow: 0 0 0 4px ${glowColor};
+      "></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      className: ''
+    });
+  }
+
+  L.marker(CENTER1, { icon: makeMarker('#7eb8f7', 'rgba(126,184,247,0.25)') })
+    .addTo(map)
+    .bindPopup('<b>2647 Pulaski Hwy</b><br>Newark, DE 19702<br><small>10-mile radius</small>');
+
+  L.marker(CENTER2, { icon: makeMarker('#6ee7a0', 'rgba(110,231,160,0.25)') })
+    .addTo(map)
+    .bindPopup('<b>301 S Ridge Ave</b><br>Middletown, DE 19709<br><small>5-mile radius</small>');
+</script>
+
+</body>
+</html>
